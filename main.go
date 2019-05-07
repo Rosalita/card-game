@@ -1,15 +1,9 @@
 package main
 
 import (
-	//"fmt"
-
-	//"bytes"
-	//"image"
 	"image/color"
-	//"log"
 	"os"
 
-	//im "github.com/Rosalita/ebiten-pkgs/imagemenu"
 	lm "github.com/Rosalita/ebiten-pkgs/listmenu"
 	"github.com/hajimehoshi/ebiten"
 
@@ -27,6 +21,7 @@ const (
 
 var (
 	state          gameState
+	activeMenu     lm.ListMenu
 	mainMenu       lm.ListMenu
 	optionsMenu    lm.ListMenu
 	screensizeMenu lm.ListMenu
@@ -34,31 +29,35 @@ var (
 	pink           = &color.NRGBA{0xff, 0x69, 0xb4, 0xff}
 )
 
+func alignMenu(menu *lm.ListMenu, screenWidth float64, screenHeight float64) {
+
+	menu.Tx = lerp(0.0, float64(screenWidth), 0.5) - float64(menu.Width/2)
+	menu.Ty = lerp(0.0, float64(screenHeight), 0.5)
+
+}
+
 func update(screen *ebiten.Image) error {
 
 	screen.Fill(color.NRGBA{0x00, 0x00, 0x00, 0xff})
 
 	if state == titleScreen {
 
-		//ebitenutil.DebugPrint(screen, "Title screen")
+		activeMenu = mainMenu
 
-		// call to draw needs to take in location to draw
-		mainMenu.Draw(screen)
+		w, h := screen.Size()
+		alignMenu(&activeMenu, float64(w), float64(h))
 
-		//fmt.Println(getCentre(screen))
-
-		// opts := &ebiten.DrawImageOptions{}
-		// opts.GeoM.Translate(200, 24)
+		activeMenu.Draw(screen)
 
 		if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
-			mainMenu.DecrementSelected()
+			activeMenu.DecrementSelected()
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
-			mainMenu.IncrementSelected()
+			activeMenu.IncrementSelected()
 		}
 
 		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
-			switch mainMenu.GetSelectedItem() {
+			switch activeMenu.GetSelectedItem() {
 			case "options":
 				state = options
 			case "quit":
@@ -68,14 +67,20 @@ func update(screen *ebiten.Image) error {
 		}
 
 	}
+
 	if state == options {
-		optionsMenu.Draw(screen)
+		activeMenu = optionsMenu
+
+		w, h := screen.Size()
+		alignMenu(&activeMenu, float64(w), float64(h))
+
+		activeMenu.Draw(screen)
 
 		if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
-			optionsMenu.DecrementSelected()
+			activeMenu.DecrementSelected()
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
-			optionsMenu.IncrementSelected()
+			activeMenu.IncrementSelected()
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			state = titleScreen
@@ -83,7 +88,7 @@ func update(screen *ebiten.Image) error {
 		}
 
 		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
-			switch optionsMenu.GetSelectedItem() {
+			switch activeMenu.GetSelectedItem() {
 			case "screensize":
 				state = screensize
 				return nil
@@ -91,14 +96,19 @@ func update(screen *ebiten.Image) error {
 			return nil
 		}
 	}
+
 	if state == screensize {
-		screensizeMenu.Draw(screen)
+		activeMenu = screensizeMenu
+		w, h := screen.Size()
+		alignMenu(&activeMenu, float64(w), float64(h))
+
+		activeMenu.Draw(screen)
 
 		if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
-			screensizeMenu.DecrementSelected()
+			activeMenu.DecrementSelected()
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
-			screensizeMenu.IncrementSelected()
+			activeMenu.IncrementSelected()
 		}
 		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 			state = options
@@ -106,7 +116,7 @@ func update(screen *ebiten.Image) error {
 		}
 
 		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
-			switch screensizeMenu.GetSelectedItem() {
+			switch activeMenu.GetSelectedItem() {
 			case "400x300":
 				ebiten.SetScreenSize(400, 300)
 			case "600x400":
@@ -116,7 +126,6 @@ func update(screen *ebiten.Image) error {
 			}
 			return nil
 		}
-
 	}
 
 	return nil
