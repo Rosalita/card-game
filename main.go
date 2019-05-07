@@ -22,15 +22,16 @@ type gameState int
 const (
 	titleScreen gameState = iota
 	options
-	charCreation
-	quit
+	screensize
 )
 
 var (
-	state    gameState
-	mainMenu lm.ListMenu
-	white    = &color.NRGBA{0xff, 0xff, 0xff, 0xff}
-	pink     = &color.NRGBA{0xff, 0x69, 0xb4, 0xff}
+	state          gameState
+	mainMenu       lm.ListMenu
+	optionsMenu    lm.ListMenu
+	screensizeMenu lm.ListMenu
+	white          = &color.NRGBA{0xff, 0xff, 0xff, 0xff}
+	pink           = &color.NRGBA{0xff, 0x69, 0xb4, 0xff}
 )
 
 func update(screen *ebiten.Image) error {
@@ -44,10 +45,10 @@ func update(screen *ebiten.Image) error {
 		// call to draw needs to take in location to draw
 		mainMenu.Draw(screen)
 
-		//	fmt.Println(getCentre(screen))
+		//fmt.Println(getCentre(screen))
 
-		opts := &ebiten.DrawImageOptions{}
-		opts.GeoM.Translate(200, 24)
+		// opts := &ebiten.DrawImageOptions{}
+		// opts.GeoM.Translate(200, 24)
 
 		if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
 			mainMenu.DecrementSelected()
@@ -58,10 +59,60 @@ func update(screen *ebiten.Image) error {
 
 		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 			switch mainMenu.GetSelectedItem() {
-			case "playButton":
-				state = charCreation
-			case "quitButton":
+			case "options":
+				state = options
+			case "quit":
 				os.Exit(0)
+			}
+			return nil
+		}
+
+	}
+	if state == options {
+		optionsMenu.Draw(screen)
+
+		if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+			optionsMenu.DecrementSelected()
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+			optionsMenu.IncrementSelected()
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+			state = titleScreen
+			return nil
+		}
+
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+			switch optionsMenu.GetSelectedItem() {
+			case "screensize":
+				state = screensize
+				return nil
+			}
+			return nil
+		}
+	}
+	if state == screensize {
+		screensizeMenu.Draw(screen)
+
+		if inpututil.IsKeyJustPressed(ebiten.KeyUp) {
+			screensizeMenu.DecrementSelected()
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyDown) {
+			screensizeMenu.IncrementSelected()
+		}
+		if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
+			state = options
+			return nil
+		}
+
+		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+			switch screensizeMenu.GetSelectedItem() {
+			case "400x300":
+				ebiten.SetScreenSize(400, 300)
+			case "600x400":
+				ebiten.SetScreenSize(600, 400)
+			case "800x600":
+				ebiten.SetScreenSize(800, 600)
 			}
 			return nil
 		}
