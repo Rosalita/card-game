@@ -32,7 +32,7 @@ var (
 func alignMenu(menu *lm.ListMenu, screenWidth float64, screenHeight float64) {
 
 	menu.Tx = lerp(0.0, float64(screenWidth), 0.5) - float64(menu.Width/2)
-	menu.Ty = lerp(0.0, float64(screenHeight), 0.5)
+	menu.Ty = lerp(0.0, float64(screenHeight), 0.7) - float64(menu.Height/2)
 
 }
 
@@ -116,14 +116,30 @@ func update(screen *ebiten.Image) error {
 		}
 
 		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
+
 			switch activeMenu.GetSelectedItem() {
-			case "400x300":
-				ebiten.SetScreenSize(400, 300)
-			case "600x400":
-				ebiten.SetScreenSize(600, 400)
+			case "640x480":
+				ebiten.SetScreenSize(640, 480)
 			case "800x600":
 				ebiten.SetScreenSize(800, 600)
+			case "1024x768":
+				ebiten.SetScreenSize(1024, 768)
+			case "1280x720":
+				ebiten.SetScreenSize(1280, 720)
+			case "1336x768":
+				ebiten.SetScreenSize(1336, 768)
+			case "1440x1080":
+				ebiten.SetScreenSize(1440, 1080)
+			case "1600x900":
+				ebiten.SetScreenSize(1024, 768)
+			case "1600x1200":
+				ebiten.SetScreenSize(1600, 1200)
+			case "1920x1080":
+				ebiten.SetScreenSize(1920, 1080)
+			case "1920x1200":
+				ebiten.SetScreenSize(1920, 1200)
 			}
+
 			return nil
 		}
 	}
@@ -136,7 +152,7 @@ func main() {
 	initMenus()
 	state = titleScreen
 
-	if err := ebiten.Run(update, 400, 300, 2, "Card Game"); err != nil {
+	if err := ebiten.Run(update, 1024, 768, 1, "Card Game"); err != nil {
 		panic(err)
 	}
 }
