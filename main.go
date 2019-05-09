@@ -3,6 +3,7 @@ package main
 import (
 	"image/color"
 	"os"
+	"math"
 
 	lm "github.com/Rosalita/ebiten-pkgs/listmenu"
 	"github.com/hajimehoshi/ebiten"
@@ -27,14 +28,9 @@ var (
 	screensizeMenu lm.ListMenu
 	white          = &color.NRGBA{0xff, 0xff, 0xff, 0xff}
 	pink           = &color.NRGBA{0xff, 0x69, 0xb4, 0xff}
+	bestRatio = 1.0
 )
 
-func alignMenu(menu *lm.ListMenu, screenWidth float64, screenHeight float64) {
-
-	menu.Tx = lerp(0.0, float64(screenWidth), 0.5) - float64(menu.Width/2)
-	menu.Ty = lerp(0.0, float64(screenHeight), 0.7) - float64(menu.Height/2)
-
-}
 
 func update(screen *ebiten.Image) error {
 
@@ -43,9 +39,7 @@ func update(screen *ebiten.Image) error {
 	if state == titleScreen {
 
 		activeMenu = mainMenu
-
-		w, h := screen.Size()
-		alignMenu(&activeMenu, float64(w), float64(h))
+		activeMenu.SetScale(bestRatio)
 
 		activeMenu.Draw(screen)
 
@@ -70,9 +64,7 @@ func update(screen *ebiten.Image) error {
 
 	if state == options {
 		activeMenu = optionsMenu
-
-		w, h := screen.Size()
-		alignMenu(&activeMenu, float64(w), float64(h))
+		activeMenu.SetScale(bestRatio)
 
 		activeMenu.Draw(screen)
 
@@ -99,8 +91,7 @@ func update(screen *ebiten.Image) error {
 
 	if state == screensize {
 		activeMenu = screensizeMenu
-		w, h := screen.Size()
-		alignMenu(&activeMenu, float64(w), float64(h))
+		activeMenu.SetScale(bestRatio)
 
 		activeMenu.Draw(screen)
 
@@ -117,28 +108,48 @@ func update(screen *ebiten.Image) error {
 
 		if inpututil.IsKeyJustPressed(ebiten.KeyEnter) {
 
+			var newWidth, newHeight int
+
 			switch activeMenu.GetSelectedItem() {
 			case "640x480":
-				ebiten.SetScreenSize(640, 480)
+				newWidth = 640
+				newHeight = 480
 			case "800x600":
-				ebiten.SetScreenSize(800, 600)
+				newWidth = 800
+				newHeight = 600
 			case "1024x768":
-				ebiten.SetScreenSize(1024, 768)
+				newWidth = 1024
+				newHeight = 768
 			case "1280x720":
-				ebiten.SetScreenSize(1280, 720)
+				newWidth = 1280
+				newHeight = 720
 			case "1336x768":
-				ebiten.SetScreenSize(1336, 768)
+				newWidth = 1336
+				newHeight = 768
 			case "1440x1080":
-				ebiten.SetScreenSize(1440, 1080)
+				newWidth = 1440
+				newHeight = 1080
 			case "1600x900":
-				ebiten.SetScreenSize(1024, 768)
+				newWidth = 1600
+				newHeight = 900
 			case "1600x1200":
-				ebiten.SetScreenSize(1600, 1200)
+				newWidth = 1600
+				newHeight = 1200
 			case "1920x1080":
-				ebiten.SetScreenSize(1920, 1080)
+				newWidth = 1920
+				newHeight = 1080
 			case "1920x1200":
-				ebiten.SetScreenSize(1920, 1200)
+				newWidth = 1920
+				newHeight = 1200
 			}
+
+			widthRatio := float64(newWidth)/float64(activeMenu.Width)
+			heightRatio := float64(newHeight)/float64(activeMenu.Height)
+
+			bestRatio = math.Min(widthRatio, heightRatio)
+
+			activeMenu.SetScale(bestRatio)
+			ebiten.SetScreenSize(newWidth, newHeight)
 
 			return nil
 		}
@@ -155,4 +166,8 @@ func main() {
 	if err := ebiten.Run(update, 1024, 768, 1, "Card Game"); err != nil {
 		panic(err)
 	}
+}
+
+func calcRatio(width int, height int) (ratio float64) {
+	return float64(width) / float64(height)
 }
