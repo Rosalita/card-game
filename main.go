@@ -22,6 +22,9 @@ var (
 	mainMenu       lm.ListMenu
 	optionsMenu    lm.ListMenu
 	screensizeMenu lm.ListMenu
+	myDeck         cardStack
+	myDiscardPile  cardStack
+	myHand         hand
 	white          = &color.NRGBA{0xff, 0xff, 0xff, 0xff}
 	pink           = &color.NRGBA{0xff, 0x69, 0xb4, 0xff}
 	bestRatio      = 1.0
