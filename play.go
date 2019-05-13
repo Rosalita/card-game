@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"image/color"
 	"log"
 	"math/rand"
@@ -50,7 +51,29 @@ func (cs *cardStack) shuffle() {
 	return
 }
 
-func newDiscardPile(width, height int) cardStack {
+func (cs *cardStack) removeCard(index int) (card, error) {
+
+	totalCards := len(cs.cards)
+	if totalCards < 1 {
+		return card{}, errors.New("no removable cards")
+	}
+
+	if index > (totalCards-1) || index < 0 {
+		return card{}, errors.New("index out of range")
+	}
+
+	removedCard := cs.cards[index]
+
+	cs.cards = append(cs.cards[:index], cs.cards[index+1:]...)
+
+	return removedCard, nil
+}
+
+func (cs *cardStack) addCard(cardToAdd card) {
+	cs.cards = append(cs.cards, cardToAdd)
+}
+
+func newCardStack(width, height int) cardStack {
 	var cs cardStack
 	cs.cardWidth = width
 	cs.cardHeight = height
@@ -133,6 +156,12 @@ type hand struct {
 	maxSize     int
 }
 
+// TO DO
+// need an interface for card stacks, hands, play areas etc
+// something that can remove cards and add a card
+// move a card function removes from source, adds to destination, accepts interface
+// have started writing add and remove card methods for hand and card stacks
+
 func (h *hand) cardDraw() { //draws a card from the origin deck and adds it to the hand
 
 	numDeckCards := len(h.originDeck.cards)
@@ -167,6 +196,33 @@ func (h *hand) cardDiscard() { //draws a card from the origin deck and adds it t
 
 }
 
+func (h *hand) removeCard(index int) (card, error) {
+
+	totalCards := len(h.cards)
+	if totalCards < 1 {
+		return card{}, errors.New("no removable cards")
+	}
+
+	if index > (totalCards-1) || index < 0 {
+		return card{}, errors.New("index out of range")
+	}
+
+	removedCard := h.cards[index]
+
+	h.cards = append(h.cards[:index], h.cards[index+1:]...)
+
+	return removedCard, nil
+}
+
+func (h *hand) addCard(cardToAdd card) error {
+
+	if len(h.cards) < h.maxSize {
+		h.cards = append(h.cards, cardToAdd)
+		return nil
+	}
+	return errors.New("hand is full")
+}
+
 func (h *hand) draw(screen *ebiten.Image, tx, ty float64) {
 
 	opts := &ebiten.DrawImageOptions{}
@@ -192,30 +248,79 @@ func newHand(maxSize int, originDeck *cardStack, discardPile *cardStack) hand {
 	return hand
 }
 
+// func dealCards(dealer int, cardStock, playArea *cardStack, player1Hand, player2Hand *hand) {
+
+// 	var dealerHand, opponentHand *hand
+// 	switch dealer {
+// 	case 1:
+// 		dealerHand = player1Hand
+// 		opponentHand = player2Hand
+// 	case 2:
+// 		dealerHand = player2Hand
+// 		opponentHand = player1Hand
+// 	}
+
+// 	// dealer deals 4 cards to opponent
+// 	// then dealer deals 4 cards to play area
+// 	// then dealer deals 4 cards to self
+// 	// then repeat this once
+
+// }
+
 func initialisePlay() {
 
-	defaultCardWidth := 50
-	defaultCardHeight := 70
+	defaultCardWidth := 20
+	defaultCardHeight := 40
 
-	myDeck = newDeck(defaultCardWidth, defaultCardHeight)
-	myDeck.shuffle()
+	cardStock = newDeck(defaultCardWidth, defaultCardHeight)
+	cardStock.shuffle()
 
-	myDiscardPile = newDiscardPile(defaultCardWidth, defaultCardHeight)
-	myHand = newHand(6, &myDeck, &myDiscardPile)
+	player1Hand = newHand(6, &cardStock, &player1DiscardPile)
+	player2Hand = newHand(6, &cardStock, &player2DiscardPile)
+
+	playArea = newCardStack(defaultCardWidth, defaultCardHeight)
+
+	player1DiscardPile = newCardStack(defaultCardWidth, defaultCardHeight)
+	player2DiscardPile = newCardStack(defaultCardWidth, defaultCardHeight)
+
+	//dealer := 1 //to do pick cards to see who goes first
+
+	//dealCards(dealer, &cardStock, player1Hand, player2Hand, playArea)
+
 }
 
 func updatePlay(screen *ebiten.Image) error {
 
-	myDeck.draw(screen, 0, 0, 8)
-	myDiscardPile.draw(screen, 450, 0, 8)
-	myHand.draw(screen, 50, 450)
+	cardStock.draw(screen, 0, 150, 8)
+	player1DiscardPile.draw(screen, 450, 450, 8)
+	player2DiscardPile.draw(screen, 450, 0, 8)
+	player1Hand.draw(screen, 40, 450)
+	player2Hand.draw(screen, 40, 0)
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyD) {
-		myHand.cardDraw()
+
+		player1Hand.cardDraw()
+		// card, err := cardStock.removeCard()
+
+		// if err == nil{
+		// 	player1DiscardPile.addCard(card)
+		// }
+
 		return nil
 	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyE) {
+		player2Hand.cardDraw()
+		return nil
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
+		player2Hand.cardDiscard()
+		return nil
+	}
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
-		myHand.cardDiscard()
+		player1Hand.cardDiscard()
 		return nil
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
