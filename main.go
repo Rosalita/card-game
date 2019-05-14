@@ -17,20 +17,20 @@ const (
 )
 
 var (
-	state              gameState
-	activeMenu         lm.ListMenu
-	mainMenu           lm.ListMenu
-	optionsMenu        lm.ListMenu
-	screensizeMenu     lm.ListMenu
-	cardStock          cardStack
-	playArea           cardStack
-	player1DiscardPile cardStack
-	player2DiscardPile cardStack
-	player1Hand        cardStack
-	player2Hand        cardStack
-	white              = &color.NRGBA{0xff, 0xff, 0xff, 0xff}
-	pink               = &color.NRGBA{0xff, 0x69, 0xb4, 0xff}
-	bestRatio          = 1.0
+	state                gameState
+	activeMenu           lm.ListMenu
+	mainMenu             lm.ListMenu
+	optionsMenu          lm.ListMenu
+	screensizeMenu       lm.ListMenu
+	cardStock            cardStack
+	playArea             cardStack
+	player1DiscardPile   cardStack
+	player2DiscardPile   cardStack
+	player1Hand          cardStack
+	player2Hand          cardStack
+	white                = &color.NRGBA{0xff, 0xff, 0xff, 0xff}
+	pink                 = &color.NRGBA{0xff, 0x69, 0xb4, 0xff}
+	bestRatio            = 1.0
 )
 
 func update(screen *ebiten.Image) error {

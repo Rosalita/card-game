@@ -12,18 +12,20 @@ import (
 )
 
 type card struct {
-	borderImage  *ebiten.Image
-	image        *ebiten.Image
-	colour       *color.NRGBA
-	borderColour *color.NRGBA
+	borderImage      *ebiten.Image
+	image            *ebiten.Image
+	colour           *color.NRGBA
+	unselectedColour *color.NRGBA
+	selectedColour   *color.NRGBA
 }
 
 type cardStack struct {
-	cardWidth  int
-	cardHeight int
-	borderSize   int
-	cards      []card
-	maxSize    int
+	cardWidth     int
+	cardHeight    int
+	borderSize    int
+	cards         []card
+	maxSize       int
+	selectedIndex *int
 }
 
 func (cs *cardStack) draw(screen *ebiten.Image, tx, ty float64, cardsWide int) {
@@ -33,12 +35,16 @@ func (cs *cardStack) draw(screen *ebiten.Image, tx, ty float64, cardsWide int) {
 
 	for i, card := range cs.cards {
 
-		card.borderImage.Fill(card.borderColour)
+		if *cs.selectedIndex == i {
+			card.borderImage.Fill(card.selectedColour)
+		} else {
+			card.borderImage.Fill(card.unselectedColour)
+		}
+
 		screen.DrawImage(card.borderImage, opts)
-		card.image.Fill(card.colour)
 		opts.GeoM.Translate(float64(cs.borderSize), float64(cs.borderSize))
 		screen.DrawImage(card.image, opts)
-		opts.GeoM.Translate(- float64(cs.borderSize), - float64(cs.borderSize))
+		opts.GeoM.Translate(-float64(cs.borderSize), -float64(cs.borderSize))
 		opts.GeoM.Translate(float64(cs.cardWidth), 0)
 
 		if (i+1)%cardsWide == 0 {
@@ -85,6 +91,20 @@ func (cs *cardStack) addCard(cardToAdd card) error {
 	return errors.New("cardStack is full")
 }
 
+func (cs *cardStack) incrementSelected() {
+	maxIndex := len(cs.cards) - 1
+	if *cs.selectedIndex < maxIndex {
+		*cs.selectedIndex++
+	}
+}
+
+func (cs *cardStack) decrementSelected() {
+	minIndex := 0
+	if *cs.selectedIndex > minIndex {
+		*cs.selectedIndex--
+	}
+}
+
 func moveCard(source, destination *cardStack, index int) {
 	cardToMove, err := source.removeCard(index)
 	if err != nil {
@@ -99,27 +119,38 @@ func moveCard(source, destination *cardStack, index int) {
 	}
 }
 
-func newCardStack(width, height, maxSize int) cardStack {
+func newCardStack(width, height, maxSize, borderSize int) cardStack {
+
+	defaultSelectedIndex := 0
+
 	var cs cardStack
 
 	cs.cardWidth = width
 	cs.cardHeight = height
 	cs.maxSize = maxSize
+	cs.borderSize = borderSize
+	cs.selectedIndex = &defaultSelectedIndex
 
 	return cs
 }
 
-func newDeck(width, height, maxSize int) cardStack {
+func newDeck(width, height, maxSize, borderSize int) cardStack {
+
+	defaultSelectedIndex := 0
 
 	var cs cardStack
 
 	cs.cardWidth = width
 	cs.cardHeight = height
 	cs.maxSize = maxSize
-	cs.borderSize = 2
+	cs.borderSize = borderSize
+	cs.selectedIndex = &defaultSelectedIndex
 
 	//unselected border colour
 	unselected := &color.NRGBA{0x44, 0x44, 0x44, 0xff}
+
+	//selected border colour
+	selected := &color.NRGBA{0xff, 0x00, 0xff, 0xff}
 
 	//January colour light frosty blue
 	janCol := &color.NRGBA{0x81, 0xc1, 0xff, 0xff}
@@ -167,18 +198,21 @@ func newDeck(width, height, maxSize int) cardStack {
 
 		for i := 0; i < cardsPerMonth; i++ {
 			borderImg, err := ebiten.NewImage(cs.cardWidth, cs.cardHeight, ebiten.FilterNearest)
-			img, err := ebiten.NewImage(cs.cardWidth - (cs.borderSize *2), cs.cardHeight - (cs.borderSize * 2), ebiten.FilterNearest)
+			borderImg.Fill(unselected)
+			img, err := ebiten.NewImage(cs.cardWidth-(cs.borderSize*2), cs.cardHeight-(cs.borderSize*2), ebiten.FilterNearest)
+
+			img.Fill(colour)
 
 			if err != nil {
 				log.Println(err)
 			}
 
-
 			newCard := card{
-				borderImage: borderImg,
-				image:        img,
-				colour:       colour,
-				borderColour: unselected,
+				borderImage:      borderImg,
+				image:            img,
+				colour:           colour,
+				unselectedColour: unselected,
+				selectedColour:   selected,
 			}
 
 			cs.cards = append(cs.cards, newCard)
@@ -187,11 +221,17 @@ func newDeck(width, height, maxSize int) cardStack {
 	return cs
 }
 
-func newHand(cardWidth, cardHeight, maxSize int) cardStack {
+func newHand(cardWidth, cardHeight, maxSize, borderSize int) cardStack {
+
+	defaultSelectedIndex := 0
+
 	var hand cardStack
+
 	hand.cardWidth = cardWidth
 	hand.cardHeight = cardHeight
 	hand.maxSize = maxSize
+	hand.borderSize = borderSize
+	hand.selectedIndex = &defaultSelectedIndex
 	return hand
 }
 
@@ -224,9 +264,7 @@ func dealCards(dealer int, cardStock, playArea, player1Hand, player2Hand *cardSt
 		for i := 0; i < 4; i++ {
 			moveCard(cardStock, dealerHand, len(cardStock.cards)-1)
 		}
-
 	}
-
 }
 
 func initialisePlay() {
@@ -234,21 +272,23 @@ func initialisePlay() {
 	defaultCardWidth := 20
 	defaultCardHeight := 40
 	defaultDeckSize := 48
+	defaultBorderSize := 2
 
-	cardStock = newDeck(defaultCardWidth, defaultCardHeight, defaultDeckSize)
+	cardStock = newDeck(defaultCardWidth, defaultCardHeight, defaultDeckSize, defaultBorderSize)
 	cardStock.shuffle()
 
-	player1Hand = newHand(defaultCardWidth, defaultCardHeight, 8)
-	player2Hand = newHand(defaultCardWidth, defaultCardHeight, 8)
+	player1Hand = newHand(defaultCardWidth, defaultCardHeight, 8, defaultBorderSize)
+	player2Hand = newHand(defaultCardWidth, defaultCardHeight, 8, defaultBorderSize)
 
-	playArea = newCardStack(defaultCardWidth, defaultCardHeight, 8)
+	playArea = newCardStack(defaultCardWidth, defaultCardHeight, 8, defaultBorderSize)
 
-	player1DiscardPile = newCardStack(defaultCardWidth, defaultCardHeight, defaultDeckSize)
-	player2DiscardPile = newCardStack(defaultCardWidth, defaultCardHeight, defaultDeckSize)
+	player1DiscardPile = newCardStack(defaultCardWidth, defaultCardHeight, defaultDeckSize, defaultBorderSize)
+	player2DiscardPile = newCardStack(defaultCardWidth, defaultCardHeight, defaultDeckSize, defaultBorderSize)
 
 	dealer := 1 //TO DO pick cards to see who goes first
 
 	dealCards(dealer, &cardStock, &playArea, &player1Hand, &player2Hand)
+
 }
 
 func updatePlay(screen *ebiten.Image) error {
@@ -259,6 +299,16 @@ func updatePlay(screen *ebiten.Image) error {
 	player2DiscardPile.draw(screen, 450, 0, 8)
 	player1Hand.draw(screen, 40, 450, 8)
 	player2Hand.draw(screen, 40, 0, 8)
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
+		player1Hand.incrementSelected()
+		return nil
+	}
+
+	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
+		player1Hand.decrementSelected()
+		return nil
+	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyD) {
 		moveCard(&cardStock, &player1Hand, len(cardStock.cards)-1)
@@ -279,6 +329,7 @@ func updatePlay(screen *ebiten.Image) error {
 		moveCard(&player1Hand, &player1DiscardPile, len(player1Hand.cards)-1)
 		return nil
 	}
+
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		state = titleScreen
 		return nil
