@@ -28,6 +28,7 @@ var (
 	player2DiscardPile   cardStack
 	player1Hand          cardStack
 	player2Hand          cardStack
+	activeHand			 *cardStack
 	white                = &color.NRGBA{0xff, 0xff, 0xff, 0xff}
 	pink                 = &color.NRGBA{0xff, 0x69, 0xb4, 0xff}
 	bestRatio            = 1.0
@@ -70,7 +71,7 @@ func main() {
 	initMenus()
 	state = titleScreen
 
-	if err := ebiten.Run(update, 1024, 768, 1, "Card Game"); err != nil {
+	if err := ebiten.Run(update, 1366, 768, 1, "Card Game"); err != nil {
 		panic(err)
 	}
 }

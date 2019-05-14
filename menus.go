@@ -89,7 +89,7 @@ func initMenus() {
 			TxtY:     25,
 			BgColour: white},
 		{Name: "1600x900",
-			Text:     "1280 x 720",
+			Text:     "1600 x 900",
 			TxtX:     20,
 			TxtY:     25,
 			BgColour: white},

@@ -20,12 +20,13 @@ type card struct {
 }
 
 type cardStack struct {
-	cardWidth     int
-	cardHeight    int
-	borderSize    int
-	cards         []card
-	maxSize       int
-	selectedIndex *int
+	cardWidth       int
+	cardHeight      int
+	borderSize      int
+	cards           []card
+	maxSize         int
+	selectedIndex   *int
+	selectionActive bool
 }
 
 func (cs *cardStack) draw(screen *ebiten.Image, tx, ty float64, cardsWide int) {
@@ -35,10 +36,12 @@ func (cs *cardStack) draw(screen *ebiten.Image, tx, ty float64, cardsWide int) {
 
 	for i, card := range cs.cards {
 
-		if *cs.selectedIndex == i {
-			card.borderImage.Fill(card.selectedColour)
-		} else {
-			card.borderImage.Fill(card.unselectedColour)
+		if cs.selectionActive {
+			if *cs.selectedIndex == i {
+				card.borderImage.Fill(card.selectedColour)
+			} else {
+				card.borderImage.Fill(card.unselectedColour)
+			}
 		}
 
 		screen.DrawImage(card.borderImage, opts)
@@ -130,6 +133,7 @@ func newCardStack(width, height, maxSize, borderSize int) cardStack {
 	cs.maxSize = maxSize
 	cs.borderSize = borderSize
 	cs.selectedIndex = &defaultSelectedIndex
+	cs.selectionActive = false
 
 	return cs
 }
@@ -145,6 +149,7 @@ func newDeck(width, height, maxSize, borderSize int) cardStack {
 	cs.maxSize = maxSize
 	cs.borderSize = borderSize
 	cs.selectedIndex = &defaultSelectedIndex
+	cs.selectionActive = false
 
 	//unselected border colour
 	unselected := &color.NRGBA{0x44, 0x44, 0x44, 0xff}
@@ -232,6 +237,7 @@ func newHand(cardWidth, cardHeight, maxSize, borderSize int) cardStack {
 	hand.maxSize = maxSize
 	hand.borderSize = borderSize
 	hand.selectedIndex = &defaultSelectedIndex
+	hand.selectionActive = false
 	return hand
 }
 
@@ -269,8 +275,8 @@ func dealCards(dealer int, cardStock, playArea, player1Hand, player2Hand *cardSt
 
 func initialisePlay() {
 
-	defaultCardWidth := 20
-	defaultCardHeight := 40
+	defaultCardWidth := 30
+	defaultCardHeight := 50
 	defaultDeckSize := 48
 	defaultBorderSize := 2
 
@@ -288,6 +294,13 @@ func initialisePlay() {
 	dealer := 1 //TO DO pick cards to see who goes first
 
 	dealCards(dealer, &cardStock, &playArea, &player1Hand, &player2Hand)
+	switch dealer{
+	case 1:
+		activeHand = &player1Hand
+	case 2:
+		activeHand = &player2Hand 
+	}
+	activeHand.selectionActive = true
 
 }
 
@@ -301,12 +314,12 @@ func updatePlay(screen *ebiten.Image) error {
 	player2Hand.draw(screen, 40, 0, 8)
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
-		player1Hand.incrementSelected()
+		activeHand.incrementSelected()
 		return nil
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
-		player1Hand.decrementSelected()
+		activeHand.decrementSelected()
 		return nil
 	}
 

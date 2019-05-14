@@ -41,8 +41,8 @@ func updateScreensize(screen *ebiten.Image) error{
 			case "1280x720":
 				newWidth = 1280
 				newHeight = 720
-			case "1336x768":
-				newWidth = 1336
+			case "1366x768":
+				newWidth = 1366
 				newHeight = 768
 			case "1440x1080":
 				newWidth = 1440
