@@ -12,14 +12,18 @@ import (
 )
 
 type card struct {
-	image  *ebiten.Image
-	colour *color.NRGBA
+	borderImage  *ebiten.Image
+	image        *ebiten.Image
+	colour       *color.NRGBA
+	borderColour *color.NRGBA
 }
 
 type cardStack struct {
 	cardWidth  int
 	cardHeight int
-	cards      []card // index 0 is the bottom of the deck, representing the last card to be drawn from the deck
+	borderSize   int
+	cards      []card
+	maxSize    int
 }
 
 func (cs *cardStack) draw(screen *ebiten.Image, tx, ty float64, cardsWide int) {
@@ -29,9 +33,12 @@ func (cs *cardStack) draw(screen *ebiten.Image, tx, ty float64, cardsWide int) {
 
 	for i, card := range cs.cards {
 
+		card.borderImage.Fill(card.borderColour)
+		screen.DrawImage(card.borderImage, opts)
 		card.image.Fill(card.colour)
-
+		opts.GeoM.Translate(float64(cs.borderSize), float64(cs.borderSize))
 		screen.DrawImage(card.image, opts)
+		opts.GeoM.Translate(- float64(cs.borderSize), - float64(cs.borderSize))
 		opts.GeoM.Translate(float64(cs.cardWidth), 0)
 
 		if (i+1)%cardsWide == 0 {
@@ -69,23 +76,50 @@ func (cs *cardStack) removeCard(index int) (card, error) {
 	return removedCard, nil
 }
 
-func (cs *cardStack) addCard(cardToAdd card) {
-	cs.cards = append(cs.cards, cardToAdd)
+func (cs *cardStack) addCard(cardToAdd card) error {
+
+	if len(cs.cards) < cs.maxSize {
+		cs.cards = append(cs.cards, cardToAdd)
+		return nil
+	}
+	return errors.New("cardStack is full")
 }
 
-func newCardStack(width, height int) cardStack {
+func moveCard(source, destination *cardStack, index int) {
+	cardToMove, err := source.removeCard(index)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	err = destination.addCard(cardToMove)
+	if err != nil {
+		log.Println(err)
+		source.addCard(cardToMove)
+		return
+	}
+}
+
+func newCardStack(width, height, maxSize int) cardStack {
 	var cs cardStack
+
 	cs.cardWidth = width
 	cs.cardHeight = height
+	cs.maxSize = maxSize
+
 	return cs
 }
 
-func newDeck(width, height int) cardStack {
+func newDeck(width, height, maxSize int) cardStack {
 
 	var cs cardStack
 
 	cs.cardWidth = width
 	cs.cardHeight = height
+	cs.maxSize = maxSize
+	cs.borderSize = 2
+
+	//unselected border colour
+	unselected := &color.NRGBA{0x44, 0x44, 0x44, 0xff}
 
 	//January colour light frosty blue
 	janCol := &color.NRGBA{0x81, 0xc1, 0xff, 0xff}
@@ -132,15 +166,19 @@ func newDeck(width, height int) cardStack {
 	for _, colour := range monthColours {
 
 		for i := 0; i < cardsPerMonth; i++ {
-			img, err := ebiten.NewImage(cs.cardWidth, cs.cardHeight, ebiten.FilterNearest)
+			borderImg, err := ebiten.NewImage(cs.cardWidth, cs.cardHeight, ebiten.FilterNearest)
+			img, err := ebiten.NewImage(cs.cardWidth - (cs.borderSize *2), cs.cardHeight - (cs.borderSize * 2), ebiten.FilterNearest)
 
 			if err != nil {
 				log.Println(err)
 			}
 
+
 			newCard := card{
-				image:  img,
-				colour: colour,
+				borderImage: borderImg,
+				image:        img,
+				colour:       colour,
+				borderColour: unselected,
 			}
 
 			cs.cards = append(cs.cards, newCard)
@@ -149,178 +187,96 @@ func newDeck(width, height int) cardStack {
 	return cs
 }
 
-type hand struct {
-	originDeck  *cardStack
-	discardPile *cardStack
-	cards       []card // index 0 is first card drawn
-	maxSize     int
-}
-
-// TO DO
-// need an interface for card stacks, hands, play areas etc
-// something that can remove cards and add a card
-// move a card function removes from source, adds to destination, accepts interface
-// have started writing add and remove card methods for hand and card stacks
-
-func (h *hand) cardDraw() { //draws a card from the origin deck and adds it to the hand
-
-	numDeckCards := len(h.originDeck.cards)
-	if numDeckCards < 1 {
-		return
-	}
-
-	if len(h.cards) >= h.maxSize {
-		return
-	}
-
-	drawnCard := h.originDeck.cards[numDeckCards-1]
-
-	h.originDeck.cards = append(h.originDeck.cards[:numDeckCards-1])
-
-	h.cards = append(h.cards, drawnCard)
-
-}
-
-func (h *hand) cardDiscard() { //draws a card from the origin deck and adds it to the hand
-
-	numHandCards := len(h.cards)
-	if numHandCards < 1 {
-		return
-	}
-
-	discardedCard := h.cards[numHandCards-1]
-
-	h.cards = append(h.cards[:numHandCards-1])
-
-	h.discardPile.cards = append(h.discardPile.cards, discardedCard)
-
-}
-
-func (h *hand) removeCard(index int) (card, error) {
-
-	totalCards := len(h.cards)
-	if totalCards < 1 {
-		return card{}, errors.New("no removable cards")
-	}
-
-	if index > (totalCards-1) || index < 0 {
-		return card{}, errors.New("index out of range")
-	}
-
-	removedCard := h.cards[index]
-
-	h.cards = append(h.cards[:index], h.cards[index+1:]...)
-
-	return removedCard, nil
-}
-
-func (h *hand) addCard(cardToAdd card) error {
-
-	if len(h.cards) < h.maxSize {
-		h.cards = append(h.cards, cardToAdd)
-		return nil
-	}
-	return errors.New("hand is full")
-}
-
-func (h *hand) draw(screen *ebiten.Image, tx, ty float64) {
-
-	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(tx, ty)
-
-	cardWidth := h.originDeck.cardWidth
-
-	for _, card := range h.cards {
-
-		card.image.Fill(card.colour)
-
-		screen.DrawImage(card.image, opts)
-		opts.GeoM.Translate(float64(cardWidth), 0)
-
-	}
-}
-
-func newHand(maxSize int, originDeck *cardStack, discardPile *cardStack) hand {
-	var hand hand
+func newHand(cardWidth, cardHeight, maxSize int) cardStack {
+	var hand cardStack
+	hand.cardWidth = cardWidth
+	hand.cardHeight = cardHeight
 	hand.maxSize = maxSize
-	hand.originDeck = originDeck
-	hand.discardPile = discardPile
 	return hand
 }
 
-// func dealCards(dealer int, cardStock, playArea *cardStack, player1Hand, player2Hand *hand) {
+func dealCards(dealer int, cardStock, playArea, player1Hand, player2Hand *cardStack) {
 
-// 	var dealerHand, opponentHand *hand
-// 	switch dealer {
-// 	case 1:
-// 		dealerHand = player1Hand
-// 		opponentHand = player2Hand
-// 	case 2:
-// 		dealerHand = player2Hand
-// 		opponentHand = player1Hand
-// 	}
+	var dealerHand, opponentHand *cardStack
+	switch dealer {
+	case 1:
+		dealerHand = player1Hand
+		opponentHand = player2Hand
+	case 2:
+		dealerHand = player2Hand
+		opponentHand = player1Hand
+	}
 
-// 	// dealer deals 4 cards to opponent
-// 	// then dealer deals 4 cards to play area
-// 	// then dealer deals 4 cards to self
-// 	// then repeat this once
+	//cards are dealt out in two rounds
+	for round := 0; round < 2; round++ {
 
-// }
+		// dealer deals 4 cards to opponent
+		for i := 0; i < 4; i++ {
+			moveCard(cardStock, opponentHand, len(cardStock.cards)-1)
+		}
+
+		// then dealer deals 4 cards to play area
+		for i := 0; i < 4; i++ {
+			moveCard(cardStock, playArea, len(cardStock.cards)-1)
+		}
+
+		// then dealer deals 4 cards to self
+		for i := 0; i < 4; i++ {
+			moveCard(cardStock, dealerHand, len(cardStock.cards)-1)
+		}
+
+	}
+
+}
 
 func initialisePlay() {
 
 	defaultCardWidth := 20
 	defaultCardHeight := 40
+	defaultDeckSize := 48
 
-	cardStock = newDeck(defaultCardWidth, defaultCardHeight)
+	cardStock = newDeck(defaultCardWidth, defaultCardHeight, defaultDeckSize)
 	cardStock.shuffle()
 
-	player1Hand = newHand(6, &cardStock, &player1DiscardPile)
-	player2Hand = newHand(6, &cardStock, &player2DiscardPile)
+	player1Hand = newHand(defaultCardWidth, defaultCardHeight, 8)
+	player2Hand = newHand(defaultCardWidth, defaultCardHeight, 8)
 
-	playArea = newCardStack(defaultCardWidth, defaultCardHeight)
+	playArea = newCardStack(defaultCardWidth, defaultCardHeight, 8)
 
-	player1DiscardPile = newCardStack(defaultCardWidth, defaultCardHeight)
-	player2DiscardPile = newCardStack(defaultCardWidth, defaultCardHeight)
+	player1DiscardPile = newCardStack(defaultCardWidth, defaultCardHeight, defaultDeckSize)
+	player2DiscardPile = newCardStack(defaultCardWidth, defaultCardHeight, defaultDeckSize)
 
-	//dealer := 1 //to do pick cards to see who goes first
+	dealer := 1 //TO DO pick cards to see who goes first
 
-	//dealCards(dealer, &cardStock, player1Hand, player2Hand, playArea)
-
+	dealCards(dealer, &cardStock, &playArea, &player1Hand, &player2Hand)
 }
 
 func updatePlay(screen *ebiten.Image) error {
 
-	cardStock.draw(screen, 0, 150, 8)
+	cardStock.draw(screen, 0, 200, 8)
+	playArea.draw(screen, 200, 200, 4)
 	player1DiscardPile.draw(screen, 450, 450, 8)
 	player2DiscardPile.draw(screen, 450, 0, 8)
-	player1Hand.draw(screen, 40, 450)
-	player2Hand.draw(screen, 40, 0)
+	player1Hand.draw(screen, 40, 450, 8)
+	player2Hand.draw(screen, 40, 0, 8)
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyD) {
-
-		player1Hand.cardDraw()
-		// card, err := cardStock.removeCard()
-
-		// if err == nil{
-		// 	player1DiscardPile.addCard(card)
-		// }
-
+		moveCard(&cardStock, &player1Hand, len(cardStock.cards)-1)
 		return nil
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyE) {
-		player2Hand.cardDraw()
+		moveCard(&cardStock, &player2Hand, len(cardStock.cards)-1)
 		return nil
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
-		player2Hand.cardDiscard()
+		moveCard(&player2Hand, &player2DiscardPile, len(player2Hand.cards)-1)
 		return nil
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
-		player1Hand.cardDiscard()
+		moveCard(&player1Hand, &player1DiscardPile, len(player1Hand.cards)-1)
 		return nil
 	}
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {

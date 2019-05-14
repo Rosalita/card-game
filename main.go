@@ -26,8 +26,8 @@ var (
 	playArea           cardStack
 	player1DiscardPile cardStack
 	player2DiscardPile cardStack
-	player1Hand        hand
-	player2Hand        hand
+	player1Hand        cardStack
+	player2Hand        cardStack
 	white              = &color.NRGBA{0xff, 0xff, 0xff, 0xff}
 	pink               = &color.NRGBA{0xff, 0x69, 0xb4, 0xff}
 	bestRatio          = 1.0
