@@ -294,11 +294,11 @@ func initialisePlay() {
 	dealer := 1 //TO DO pick cards to see who goes first
 
 	dealCards(dealer, &cardStock, &playArea, &player1Hand, &player2Hand)
-	switch dealer{
+	switch dealer {
 	case 1:
 		activeHand = &player1Hand
 	case 2:
-		activeHand = &player2Hand 
+		activeHand = &player2Hand
 	}
 	activeHand.selectionActive = true
 
@@ -306,47 +306,47 @@ func initialisePlay() {
 
 func updatePlay(screen *ebiten.Image) error {
 
-	cardStock.draw(screen, 0, 200, 8)
-	playArea.draw(screen, 200, 200, 4)
-	player1DiscardPile.draw(screen, 450, 450, 8)
-	player2DiscardPile.draw(screen, 450, 0, 8)
-	player1Hand.draw(screen, 40, 450, 8)
-	player2Hand.draw(screen, 40, 0, 8)
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyRight) {
 		activeHand.incrementSelected()
-		return nil
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyLeft) {
 		activeHand.decrementSelected()
-		return nil
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyD) {
 		moveCard(&cardStock, &player1Hand, len(cardStock.cards)-1)
-		return nil
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyE) {
 		moveCard(&cardStock, &player2Hand, len(cardStock.cards)-1)
-		return nil
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
 		moveCard(&player2Hand, &player2DiscardPile, len(player2Hand.cards)-1)
-		return nil
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyF) {
 		moveCard(&player1Hand, &player1DiscardPile, len(player1Hand.cards)-1)
-		return nil
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyEscape) {
 		state = titleScreen
 		return nil
 	}
+
+
+	if ebiten.IsDrawingSkipped() {
+		return nil
+	}
+
+	cardStock.draw(screen, 0, 200, 8)
+	playArea.draw(screen, 200, 200, 4)
+	player1DiscardPile.draw(screen, 450, 450, 8)
+	player2DiscardPile.draw(screen, 450, 0, 8)
+	player1Hand.draw(screen, 40, 450, 8)
+	player2Hand.draw(screen, 40, 0, 8)
 
 	return nil
 }

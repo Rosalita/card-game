@@ -78,7 +78,7 @@ func initMenus() {
 			TxtX:     20,
 			TxtY:     25,
 			BgColour: white},
-		{Name: "1336x768",
+		{Name: "1366x768",
 			Text:     "1336 x 768",
 			TxtX:     20,
 			TxtY:     25,
