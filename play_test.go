@@ -20,8 +20,10 @@ func makeTestCards() (cards []card, red, green, blue color.NRGBA) {
 	for i := 0; i < 3; i++ {
 		img, _ := ebiten.NewImage(20, 40, ebiten.FilterNearest)
 		newCard := card{
-			image:  img,
-			colour: colours[i],
+			image:            img,
+			colour:           colours[i],
+			selectedColour:   &red,
+			unselectedColour: &blue,
 		}
 		testCards = append(testCards, newCard)
 	}
@@ -32,25 +34,30 @@ func TestCardStackAddCard(t *testing.T) {
 
 	testCards, _, _, _ := makeTestCards()
 	stack1 := cardStack{
-		cards:   testCards,
-		maxSize: 8,
+		cards:       testCards,
+		maxNumCards: 8,
+		cardWidth:   30,
+		cardHeight:  50,
 	}
 
 	testCards, _, _, _ = makeTestCards()
 	stack2 := cardStack{
-		cards:   testCards,
-		maxSize: 3,
+		cards:       testCards,
+		maxNumCards: 3,
 	}
 
 	yellow := color.NRGBA{0xff, 0xff, 0x00, 0xff}
 	img, _ := ebiten.NewImage(20, 40, ebiten.FilterNearest)
+
 	newCard := card{
-		image:  img,
-		colour: &yellow,
+		image:            img,
+		colour:           &yellow,
+		selectedColour:   &yellow,
+		unselectedColour: &yellow,
 	}
 
 	tests := []struct {
-		cardStack          cardStack
+		cardStack     cardStack
 		card          card
 		handSizeAfter int
 		err           error
@@ -65,7 +72,6 @@ func TestCardStackAddCard(t *testing.T) {
 		assert.Equal(t, test.handSizeAfter, len(test.cardStack.cards))
 	}
 }
-
 
 func TestCardStackRemoveCard(t *testing.T) {
 
