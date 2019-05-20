@@ -57,7 +57,7 @@ func TestCardZoneAddCard(t *testing.T) {
 	}
 
 	tests := []struct {
-		cardStack     cardZone
+		cardZone     cardZone
 		card          card
 		handSizeAfter int
 		err           error
@@ -67,13 +67,13 @@ func TestCardZoneAddCard(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := test.cardStack.addCard(test.card)
+		err := test.cardZone.addCard(test.card)
 		assert.Equal(t, test.err, err)
-		assert.Equal(t, test.handSizeAfter, len(test.cardStack.cards))
+		assert.Equal(t, test.handSizeAfter, len(test.cardZone.cards))
 	}
 }
 
-func TestCardStackRemoveCard(t *testing.T) {
+func TestCardZoneRemoveCard(t *testing.T) {
 
 	testCards, red, green, blue := makeTestCards()
 	zone1 := cardZone{
