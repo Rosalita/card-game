@@ -20,7 +20,7 @@ type card struct {
 	selectedColour        *color.NRGBA
 }
 
-type cardStack struct {
+type cardZone struct {
 	tx              int
 	ty              int
 	cardWidth       int
@@ -33,7 +33,7 @@ type cardStack struct {
 	selectionActive bool
 }
 
-type cardStackInput struct {
+type cardZoneInput struct {
 	width       int
 	height      int
 	maxNumCards int
@@ -43,49 +43,47 @@ type cardStackInput struct {
 	cardsWide   int
 }
 
-func (cs *cardStack) draw(screen *ebiten.Image) {
+func (cz *cardZone) draw(screen *ebiten.Image) {
 
 	opts := &ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(float64(cs.tx), float64(cs.ty))
+	opts.GeoM.Translate(float64(cz.tx), float64(cz.ty))
 
-	for i, card := range cs.cards {
+	for i, card := range cz.cards {
 
 		screen.DrawImage(card.unselectedBorderImage, opts)
 
-		if cs.selectionActive {
-			if *cs.selectedIndex == i {
+		if cz.selectionActive {
+			if *cz.selectedIndex == i {
 				screen.DrawImage(card.selectedBorderImage, opts)
 			}
 		}
 
-		opts.GeoM.Translate(float64(cs.borderSize), float64(cs.borderSize))
+		opts.GeoM.Translate(float64(cz.borderSize), float64(cz.borderSize))
 
 		screen.DrawImage(card.image, opts)
-		opts.GeoM.Translate(-float64(cs.borderSize), -float64(cs.borderSize))
-		opts.GeoM.Translate(float64(cs.cardWidth), 0)
+		opts.GeoM.Translate(-float64(cz.borderSize), -float64(cz.borderSize))
+		opts.GeoM.Translate(float64(cz.cardWidth), 0)
 
-		if (i+1)%cs.cardsWide == 0 {
-			opts.GeoM.Translate(-float64(cs.cardWidth*cs.cardsWide), float64(cs.cardHeight))
+		if (i+1)%cz.cardsWide == 0 {
+			opts.GeoM.Translate(-float64(cz.cardWidth*cz.cardsWide), float64(cz.cardHeight))
 		}
 	}
 }
-func (cs *cardStack) shuffle() {
+func (cz *cardZone) shuffle() {
 
-	if len(cs.cards) < 2 {
+	if len(cz.cards) < 2 {
 		return
 	}
 
 	rand.Seed(time.Now().UnixNano())
-	rand.Shuffle(len(cs.cards), func(i, j int) { cs.cards[i], cs.cards[j] = cs.cards[j], cs.cards[i] })
+	rand.Shuffle(len(cz.cards), func(i, j int) { cz.cards[i], cz.cards[j] = cz.cards[j], cz.cards[i] })
 
 	return
 }
 
+func (cz *cardZone) removeCard(index int) (card, error) {
 
-
-func (cs *cardStack) removeCard(index int) (card, error) {
-
-	totalCards := len(cs.cards)
+	totalCards := len(cz.cards)
 	if totalCards < 1 {
 		return card{}, errors.New("no removable cards")
 	}
@@ -94,57 +92,55 @@ func (cs *cardStack) removeCard(index int) (card, error) {
 		return card{}, errors.New("index out of range")
 	}
 
-	removedCard := cs.cards[index]
+	removedCard := cz.cards[index]
 
-	cs.cards = append(cs.cards[:index], cs.cards[index+1:]...)
+	cz.cards = append(cz.cards[:index], cz.cards[index+1:]...)
 
 	return removedCard, nil
 }
 
-	
+func (cz *cardZone) addCard(cardToAdd card) error {
 
-func (cs *cardStack) addCard(cardToAdd card) error {
+	if len(cz.cards) < cz.maxNumCards {
 
-	if len(cs.cards) < cs.maxNumCards {
-
-		selectedBorderImg, err := ebiten.NewImage(cs.cardWidth, cs.cardHeight, ebiten.FilterNearest)
+		selectedBorderImg, err := ebiten.NewImage(cz.cardWidth, cz.cardHeight, ebiten.FilterNearest)
 		if err != nil {
 			return err
 		}
 		selectedBorderImg.Fill(cardToAdd.selectedColour)
-		unselectedBorderImg, err := ebiten.NewImage(cs.cardWidth, cs.cardHeight, ebiten.FilterNearest)
+		unselectedBorderImg, err := ebiten.NewImage(cz.cardWidth, cz.cardHeight, ebiten.FilterNearest)
 		if err != nil {
 			return err
 		}
 		unselectedBorderImg.Fill(cardToAdd.unselectedColour)
-		img, err := ebiten.NewImage(cs.cardWidth-(cs.borderSize*2), cs.cardHeight-(cs.borderSize*2), ebiten.FilterNearest)
+		img, err := ebiten.NewImage(cz.cardWidth-(cz.borderSize*2), cz.cardHeight-(cz.borderSize*2), ebiten.FilterNearest)
 		img.Fill(cardToAdd.colour)
 
 		cardToAdd.selectedBorderImage = selectedBorderImg
 		cardToAdd.unselectedBorderImage = unselectedBorderImg
 		cardToAdd.image = img
 
-		cs.cards = append(cs.cards, cardToAdd)
+		cz.cards = append(cz.cards, cardToAdd)
 		return nil
 	}
-	return errors.New("cardStack is full")
+	return errors.New("cardZone is full")
 }
 
-func (cs *cardStack) incrementSelected() {
-	maxIndex := len(cs.cards) - 1
-	if *cs.selectedIndex < maxIndex {
-		*cs.selectedIndex++
+func (cz *cardZone) incrementSelected() {
+	maxIndex := len(cz.cards) - 1
+	if *cz.selectedIndex < maxIndex {
+		*cz.selectedIndex++
 	}
 }
 
-func (cs *cardStack) decrementSelected() {
+func (cz *cardZone) decrementSelected() {
 	minIndex := 0
-	if *cs.selectedIndex > minIndex {
-		*cs.selectedIndex--
+	if *cz.selectedIndex > minIndex {
+		*cz.selectedIndex--
 	}
 }
 
-func moveCard(source, destination *cardStack, index int) {
+func moveCard(source, destination *cardZone, index int) {
 	cardToMove, err := source.removeCard(index)
 	if err != nil {
 		log.Println(err)
@@ -158,25 +154,25 @@ func moveCard(source, destination *cardStack, index int) {
 	}
 }
 
-func newCardStack(input cardStackInput) cardStack {
+func newCardZone(input cardZoneInput) cardZone {
 
 	defaultSelectedIndex := 0
 
-	var cs cardStack
+	var cz cardZone
 
-	cs.tx = input.tx
-	cs.ty = input.ty
-	cs.cardWidth = input.width
-	cs.cardHeight = input.height
-	cs.maxNumCards = input.maxNumCards
-	cs.cardsWide = input.cardsWide
-	cs.borderSize = input.borderSize
-	cs.selectedIndex = &defaultSelectedIndex
-	cs.selectionActive = false
-	return cs
+	cz.tx = input.tx
+	cz.ty = input.ty
+	cz.cardWidth = input.width
+	cz.cardHeight = input.height
+	cz.maxNumCards = input.maxNumCards
+	cz.cardsWide = input.cardsWide
+	cz.borderSize = input.borderSize
+	cz.selectedIndex = &defaultSelectedIndex
+	cz.selectionActive = false
+	return cz
 }
 
-func initialiseCards(cs *cardStack) {
+func initialiseCards(cz *cardZone) {
 
 	//unselected border colour
 	unselected := &color.NRGBA{0x44, 0x44, 0x44, 0xff}
@@ -229,11 +225,11 @@ func initialiseCards(cs *cardStack) {
 	for _, colour := range monthColours {
 
 		for i := 0; i < cardsPerMonth; i++ {
-			selectedBorderImg, err := ebiten.NewImage(cs.cardWidth, cs.cardHeight, ebiten.FilterNearest)
+			selectedBorderImg, err := ebiten.NewImage(cz.cardWidth, cz.cardHeight, ebiten.FilterNearest)
 			selectedBorderImg.Fill(selected)
-			unselectedBorderImg, err := ebiten.NewImage(cs.cardWidth, cs.cardHeight, ebiten.FilterNearest)
+			unselectedBorderImg, err := ebiten.NewImage(cz.cardWidth, cz.cardHeight, ebiten.FilterNearest)
 			unselectedBorderImg.Fill(unselected)
-			img, err := ebiten.NewImage(cs.cardWidth-(cs.borderSize*2), cs.cardHeight-(cs.borderSize*2), ebiten.FilterNearest)
+			img, err := ebiten.NewImage(cz.cardWidth-(cz.borderSize*2), cz.cardHeight-(cz.borderSize*2), ebiten.FilterNearest)
 			img.Fill(colour)
 
 			if err != nil {
@@ -249,14 +245,14 @@ func initialiseCards(cs *cardStack) {
 				selectedColour:        selected,
 			}
 
-			cs.cards = append(cs.cards, newCard)
+			cz.cards = append(cz.cards, newCard)
 		}
 	}
 }
 
-func dealCards(dealer int, cardStock, playArea, player1Hand, player2Hand *cardStack) {
+func dealCards(dealer int, deck, playArea, player1Hand, player2Hand *cardZone) {
 
-	var dealerHand, opponentHand *cardStack
+	var dealerHand, opponentHand *cardZone
 	switch dealer {
 	case 1:
 		dealerHand = player1Hand
@@ -271,17 +267,17 @@ func dealCards(dealer int, cardStock, playArea, player1Hand, player2Hand *cardSt
 
 		// dealer deals 4 cards to opponent
 		for i := 0; i < 4; i++ {
-			moveCard(cardStock, opponentHand, len(cardStock.cards)-1)
+			moveCard(deck, opponentHand, len(deck.cards)-1)
 		}
 
 		// then dealer deals 4 cards to play area
 		for i := 0; i < 4; i++ {
-			moveCard(cardStock, playArea, len(cardStock.cards)-1)
+			moveCard(deck, playArea, len(deck.cards)-1)
 		}
 
 		// then dealer deals 4 cards to self
 		for i := 0; i < 4; i++ {
-			moveCard(cardStock, dealerHand, len(cardStock.cards)-1)
+			moveCard(deck, dealerHand, len(deck.cards)-1)
 		}
 	}
 }
@@ -293,7 +289,7 @@ func initialisePlay() {
 	defaultDeckSize := 48
 	defaultBorderSize := 2
 
-	cardStockInput := cardStackInput{
+	deckInput := cardZoneInput{
 		tx:          0,
 		ty:          200,
 		width:       defaultCardWidth,
@@ -303,12 +299,12 @@ func initialisePlay() {
 		borderSize:  defaultBorderSize,
 	}
 
-	cardStock = newCardStack(cardStockInput)
+	deck = newCardZone(deckInput)
 
-	initialiseCards(&cardStock)
-	cardStock.shuffle()
+	initialiseCards(&deck)
+	deck.shuffle()
 
-	p1HandInput := cardStackInput{
+	p1HandInput := cardZoneInput{
 		tx:          40,
 		ty:          600,
 		width:       defaultCardWidth,
@@ -318,7 +314,7 @@ func initialisePlay() {
 		borderSize:  defaultBorderSize,
 	}
 
-	p2HandInput := cardStackInput{
+	p2HandInput := cardZoneInput{
 		tx:          40,
 		ty:          0,
 		width:       defaultCardWidth,
@@ -328,10 +324,10 @@ func initialisePlay() {
 		borderSize:  defaultBorderSize,
 	}
 
-	player1Hand = newCardStack(p1HandInput)
-	player2Hand = newCardStack(p2HandInput)
+	player1Hand = newCardZone(p1HandInput)
+	player2Hand = newCardZone(p2HandInput)
 
-	playAreaInput := cardStackInput{
+	playAreaInput := cardZoneInput{
 		tx:          200,
 		ty:          200,
 		width:       defaultCardWidth,
@@ -341,9 +337,9 @@ func initialisePlay() {
 		borderSize:  defaultBorderSize,
 	}
 
-	playArea = newCardStack(playAreaInput)
+	playArea = newCardZone(playAreaInput)
 
-	p1DiscardInput := cardStackInput{
+	p1DiscardInput := cardZoneInput{
 		tx:          450,
 		ty:          450,
 		width:       defaultCardWidth,
@@ -353,7 +349,7 @@ func initialisePlay() {
 		borderSize:  defaultBorderSize,
 	}
 
-	p2DiscardInput := cardStackInput{
+	p2DiscardInput := cardZoneInput{
 		tx:          450,
 		ty:          0,
 		width:       defaultCardWidth,
@@ -363,12 +359,12 @@ func initialisePlay() {
 		borderSize:  defaultBorderSize,
 	}
 
-	player1DiscardPile = newCardStack(p1DiscardInput)
-	player2DiscardPile = newCardStack(p2DiscardInput)
+	player1DiscardPile = newCardZone(p1DiscardInput)
+	player2DiscardPile = newCardZone(p2DiscardInput)
 
 	dealer := 1 //TO DO pick cards to see who goes first
 
-	dealCards(dealer, &cardStock, &playArea, &player1Hand, &player2Hand)
+	dealCards(dealer, &deck, &playArea, &player1Hand, &player2Hand)
 	switch dealer {
 	case 1:
 		activeHand = &player1Hand
@@ -390,11 +386,11 @@ func updatePlay(screen *ebiten.Image) error {
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyD) {
-		moveCard(&cardStock, &player1Hand, len(cardStock.cards)-1)
+		moveCard(&deck, &player1Hand, len(deck.cards)-1)
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyE) {
-		moveCard(&cardStock, &player2Hand, len(cardStock.cards)-1)
+		moveCard(&deck, &player2Hand, len(deck.cards)-1)
 	}
 
 	if inpututil.IsKeyJustPressed(ebiten.KeyR) {
@@ -414,7 +410,7 @@ func updatePlay(screen *ebiten.Image) error {
 		return nil
 	}
 
-	cardStock.draw(screen)
+	deck.draw(screen)
 	playArea.draw(screen)
 	player1DiscardPile.draw(screen)
 	player2DiscardPile.draw(screen)
