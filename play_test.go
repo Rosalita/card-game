@@ -30,10 +30,10 @@ func makeTestCards() (cards []card, red, green, blue color.NRGBA) {
 	return testCards, red, green, blue
 }
 
-func TestCardStackAddCard(t *testing.T) {
+func TestCardZoneAddCard(t *testing.T) {
 
 	testCards, _, _, _ := makeTestCards()
-	stack1 := cardStack{
+	zone1 := cardZone{
 		cards:       testCards,
 		maxNumCards: 8,
 		cardWidth:   30,
@@ -41,7 +41,7 @@ func TestCardStackAddCard(t *testing.T) {
 	}
 
 	testCards, _, _, _ = makeTestCards()
-	stack2 := cardStack{
+	zone2 := cardZone{
 		cards:       testCards,
 		maxNumCards: 3,
 	}
@@ -57,73 +57,73 @@ func TestCardStackAddCard(t *testing.T) {
 	}
 
 	tests := []struct {
-		cardStack     cardStack
+		cardZone     cardZone
 		card          card
 		handSizeAfter int
 		err           error
 	}{
-		{stack1, newCard, 4, nil},
-		{stack2, newCard, 3, errors.New("cardStack is full")},
+		{zone1, newCard, 4, nil},
+		{zone2, newCard, 3, errors.New("cardZone is full")},
 	}
 
 	for _, test := range tests {
-		err := test.cardStack.addCard(test.card)
+		err := test.cardZone.addCard(test.card)
 		assert.Equal(t, test.err, err)
-		assert.Equal(t, test.handSizeAfter, len(test.cardStack.cards))
+		assert.Equal(t, test.handSizeAfter, len(test.cardZone.cards))
 	}
 }
 
-func TestCardStackRemoveCard(t *testing.T) {
+func TestCardZoneRemoveCard(t *testing.T) {
 
 	testCards, red, green, blue := makeTestCards()
-	stack1 := cardStack{
+	zone1 := cardZone{
 		cards: testCards,
 	}
 
 	testCards, red, green, blue = makeTestCards()
-	stack2 := cardStack{
+	zone2 := cardZone{
 		cards: testCards,
 	}
 
 	testCards, red, green, blue = makeTestCards()
-	stack3 := cardStack{
+	zone3 := cardZone{
 		cards: testCards,
 	}
 
 	testCards, red, green, blue = makeTestCards()
-	stack4 := cardStack{
+	zone4 := cardZone{
 		cards: testCards,
 	}
 
 	testCards, red, green, blue = makeTestCards()
-	stack5 := cardStack{
+	zone5 := cardZone{
 		cards: testCards,
 	}
 
-	stack6 := cardStack{}
+	zone6 := cardZone{}
 
 	tests := []struct {
-		cardStack         cardStack
+		cardZone         cardZone
 		index             int
 		cardRemovedColour color.NRGBA
-		stackSizeAfter    int
+		zoneSizeAfter    int
 		err               error
 	}{
-		{stack1, 0, red, 2, nil},
-		{stack2, 1, green, 2, nil},
-		{stack3, 2, blue, 2, nil},
-		{stack4, 4, color.NRGBA{}, 3, errors.New("index out of range")},
-		{stack5, -1, color.NRGBA{}, 3, errors.New("index out of range")},
-		{stack6, 0, color.NRGBA{}, 0, errors.New("no removable cards")},
+		{zone1, 0, red, 2, nil},
+		{zone2, 1, green, 2, nil},
+		{zone3, 2, blue, 2, nil},
+		{zone4, 4, color.NRGBA{}, 3, errors.New("index out of range")},
+		{zone5, -1, color.NRGBA{}, 3, errors.New("index out of range")},
+		{zone6, 0, color.NRGBA{}, 0, errors.New("no removable cards")},
 	}
 
 	for _, test := range tests {
-		card, err := test.cardStack.removeCard(test.index)
+		card, err := test.cardZone.removeCard(test.index)
 		assert.Equal(t, test.err, err)
 
 		if err == nil {
 			assert.Equal(t, test.cardRemovedColour, *card.colour)
 		}
-		assert.Equal(t, test.stackSizeAfter, len(test.cardStack.cards))
+		assert.Equal(t, test.zoneSizeAfter, len(test.cardZone.cards))
 	}
 }
